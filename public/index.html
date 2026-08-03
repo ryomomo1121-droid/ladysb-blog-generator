@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LADY'S BASE ブログ自動作成ツール</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg1: #fdf1f4;
+    --bg2: #f8e2e8;
+    --card: #ffffff;
+    --accent: #d98fa4;
+    --accent-dark: #b96b83;
+    --accent-soft: #f3d3dc;
+    --text: #4a3a3e;
+    --muted: #8a7176;
+    --border: #f1d7de;
+    --shadow: rgba(190, 120, 140, 0.18);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
+    background: linear-gradient(160deg, var(--bg1) 0%, var(--bg2) 100%);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 32px 16px 64px;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  .header { text-align: center; margin-bottom: 28px; }
+  .header .badge {
+    display: inline-block;
+    background: var(--card);
+    color: var(--accent-dark);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    padding: 4px 14px;
+    border-radius: 999px;
+    box-shadow: 0 2px 10px var(--shadow);
+    margin-bottom: 12px;
+  }
+  .header h1 { font-size: 22px; margin: 0 0 8px; color: var(--accent-dark); font-weight: 700; }
+  .header p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+  .card {
+    background: var(--card);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 10px 30px var(--shadow);
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+  }
+  label { display: block; font-size: 13px; font-weight: 700; color: var(--accent-dark); margin-bottom: 8px; }
+  input[type="text"] {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1.5px solid var(--border);
+    font-size: 15px;
+    color: var(--text);
+    background: #fffafb;
+    outline: none;
+    transition: border 0.15s;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .chip {
+    font-size: 12px;
+    background: var(--accent-soft);
+    color: var(--accent-dark);
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.1s, background 0.15s;
+  }
+  .chip:hover { background: var(--accent); color: #fff; }
+  .warn {
+    font-size: 12.5px;
+    color: var(--accent-dark);
+    background: #fff5f7;
+    border: 1px dashed var(--accent-soft);
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-top: 12px;
+    display: none;
+  }
+  .actions { margin-top: 18px; display: flex; gap: 10px; }
+  button.primary {
+    flex: 1;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    color: #fff;
+    border: none;
+    padding: 14px 20px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 20px var(--shadow);
+    transition: opacity 0.15s;
+  }
+  button.primary:disabled { opacity: 0.55; cursor: wait; }
+  button.secondary {
+    background: #fff;
+    color: var(--accent-dark);
+    border: 1.5px solid var(--accent-soft);
+    padding: 14px 18px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .loading {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    color: var(--accent-dark);
+    font-size: 13.5px;
+    margin-top: 14px;
+  }
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2.5px solid var(--accent-soft);
+    border-top-color: var(--accent-dark);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .output-card { display: none; }
+  .output-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    gap: 10px;
+  }
+  .output-head h2 { font-size: 14px; color: var(--accent-dark); margin: 0; }
+  .output-sub { font-size: 12px; color: var(--muted); margin: 0 0 16px; }
+  .copy-btn {
+    background: var(--accent-soft);
+    color: var(--accent-dark);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .copy-btn.copied { background: var(--accent); color: #fff; }
+  .copy-btn.small { padding: 6px 14px; font-size: 12px; }
+
+  #structuredView { display: flex; flex-direction: column; gap: 4px; }
+  .block {
+    background: #fffafb;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .block-title { background: #fff0f4; border-color: var(--accent-soft); }
+  .block-h2 { border-left: 4px solid var(--accent); }
+  .block-h3 { margin-left: 18px; border-left: 3px solid var(--accent-soft); background: #fffdfd; }
+  .block-cta { background: #fff0f4; border-color: var(--accent-soft); }
+  .tag {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #fff;
+    background: var(--accent-dark);
+    padding: 2px 9px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+  }
+  .tag.tag-h2 { background: var(--accent); }
+  .tag.tag-h3 { background: var(--accent-soft); color: var(--accent-dark); }
+  .tag.tag-meta { background: #d8b3bd; }
+  .block-title-text { font-size: 18px; font-weight: 700; color: var(--accent-dark); line-height: 1.6; }
+  .h2-text { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .h3-text { font-size: 14.5px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .block p, .block div.body-text {
+    font-size: 14px;
+    line-height: 1.85;
+    color: var(--text);
+    white-space: pre-wrap;
+    margin: 0;
+  }
+  .toc-list { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.9; color: var(--text); }
+
+  #rawFallback {
+    display: none;
+    white-space: pre-wrap;
+    line-height: 1.9;
+    font-size: 14.5px;
+    color: var(--text);
+    background: #fffafb;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  .seo-memo {
+    margin-top: 14px;
+    border-top: 1px dashed var(--border);
+    padding-top: 16px;
+  }
+  .seo-memo-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .seo-memo-head h3 { font-size: 13px; color: var(--muted); margin: 0; font-weight: 700; }
+  .seo-memo-body { font-size: 13px; color: var(--muted); line-height: 1.9; white-space: pre-wrap; }
+
+  .error {
+    display: none;
+    color: #a14a4a;
+    background: #fff0f0;
+    border: 1px solid #f3caca;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 13px;
+    margin-top: 14px;
+  }
+  .history-card h2 { font-size: 14px; color: var(--accent-dark); margin: 0 0 12px; }
+  .history-list { display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; }
+  .history-item {
+    font-size: 12.5px;
+    color: var(--muted);
+    background: #fff8f9;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+  }
+  .history-empty { font-size: 12.5px; color: var(--muted); }
+  .footer-note { text-align: center; font-size: 11.5px; color: var(--muted); margin-top: 24px; line-height: 1.8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="badge">LADY'S BASE　伊賀市</div>
+    <h1>ブログ自動作成ツール</h1>
+    <p>テーマ・キーワードを入れるだけで、Lady's Baseらしい&#10;やさしい文章のブログ記事を作成します。</p>
+  </div>
+
+  <div class="card">
+    <label for="themeInput">今回のテーマ・キーワード</label>
+    <input type="text" id="themeInput" placeholder="例：産後の骨盤ケア、更年期の体力低下、冷え性、姿勢改善 など">
+    <div class="chips" id="chips"></div>
+    <div class="warn" id="dupWarn"></div>
+    <div class="actions">
+      <button class="primary" id="genBtn">この内容で記事を作成する</button>
+    </div>
+    <div class="loading" id="loading"><div class="spinner"></div><span>執筆中です。少々お待ちください&hellip;</span></div>
+    <div class="error" id="errorBox"></div>
+  </div>
+
+  <div class="card output-card" id="outputCard">
+    <div class="output-head">
+      <h2>作成された記事</h2>
+      <button class="copy-btn" id="copyBtn">記事をコピーする</button>
+    </div>
+    <p class="output-sub">タイトル・導入文・目次・H2見出し・H3見出し・まとめ・CTAの構成で表示しています。コピーすると、この構成のまま記号なしのテキストで貼り付けられます。</p>
+
+    <div id="structuredView"></div>
+    <div id="rawFallback"></div>
+
+    <div class="seo-memo" id="seoMemoBlock" style="display:none;">
+      <div class="seo-memo-head">
+        <h3>SEO設定メモ（記事本体には含めません）</h3>
+        <button class="copy-btn small" id="copySeoBtn">メモをコピー</button>
+      </div>
+      <div class="seo-memo-body" id="seoMemoBody"></div>
+    </div>
+
+    <div class="actions" style="margin-top:16px;">
+      <button class="secondary" id="regenBtn" style="width:100%;">別の切り口でもう一度作成する</button>
+    </div>
+  </div>
+
+  <div class="card history-card">
+    <h2>これまで作成したテーマ（重複防止のため記録しています）</h2>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+  <div class="footer-note">
+    作成された文章は必ず一度読み返してから公開してください。<br>
+    店舗情報・料金は保存済みの正確なデータをもとに生成しますが、内容は毎回ご確認ください。
+  </div>
+
+</div>
+
+<script>
+const STORAGE_KEY = "ladysb_blog_history_v1";
+
+const SAMPLE_THEMES = ["産後の骨盤ケア", "更年期と体力低下", "冷え性・むくみ", "姿勢改善", "運動不足の解消", "ダイエット・食事管理"];
+
+const PAST_TITLES_SEED = [
+  "女性専用だから安心 上野市駅から車で５分（むくみ・冷え性）",
+  "名張・伊賀でパーソナルピラティス・マシンピラティスなら",
+  "伊賀市のマンツーマンピラティス｜夏バテ・熱中症対策にも｜県道１３８号沿い",
+  "マンツーマンだからこそ叶う、本質的な身体づくり。",
+  "選ばれる女性のための、上質なマンツーマンピラティス。",
+  "真夏こそピラティスで快適な身体づくり！",
+  "汗をたくさんかかなくても大丈夫！身体を正しく動かすことが大切",
+  "伊賀市でスマホ首・巻き肩をリセット！マシンピラティスで叶える姿勢美人への近道",
+  "呼吸の大切さを知ることのできる、呼吸が変わると身体が変わる",
+  "自宅のヨガマットでは限界？専用マシン（リフォーマー）だからこそ得られる驚きの効果",
+  "伊賀市の女性専用ピラティスで便秘とぽっこりお腹を根本改善　腸活とボディメイクを叶える方法"
+];
+
+let lastArticleData = null;
+let lastRawText = "";
+
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  const seeded = PAST_TITLES_SEED.map(t => ({ theme: "(既存記事)", title: t, date: "" }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
+  return seeded;
+}
+
+function saveHistoryEntry(theme, title) {
+  const hist = loadHistory();
+  hist.unshift({ theme, title, date: new Date().toLocaleDateString("ja-JP") });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(hist));
+  renderHistory();
+}
+
+function renderHistory() {
+  const hist = loadHistory();
+  const el = document.getElementById("historyList");
+  if (!hist.length) {
+    el.innerHTML = '<div class="history-empty">まだ記事がありません。</div>';
+    return;
+  }
+  el.innerHTML = hist.map(h =>
+    `<div class="history-item">${h.date ? h.date + "　" : ""}${escapeHtml(h.title)}</div>`
+  ).join("");
+}
+
+function escapeHtml(s) {
+  return (s || "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+
+function renderChips() {
+  const el = document.getElementById("chips");
+  el.innerHTML = SAMPLE_THEMES.map(t => `<button class="chip" type="button">${t}</button>`).join("");
+  el.querySelectorAll(".chip").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById("themeInput").value = btn.textContent;
+      checkDuplicate();
+    });
+  });
+}
+
+function checkDuplicate() {
+  const theme = document.getElementById("themeInput").value.trim();
+  const warn = document.getElementById("dupWarn");
+  if (!theme) { warn.style.display = "none"; return; }
+  const hist = loadHistory();
+  const hit = hist.find(h => h.title.includes(theme) || (h.theme && h.theme !== "(既存記事)" && h.theme.includes(theme)));
+  if (hit) {
+    warn.style.display = "block";
+    warn.textContent = "似たテーマの記事がすでにあります（" + hit.title + "）。生成時は別の切り口になるよう指示しますが、気になる場合はテーマを少し変えてみてください。";
+  } else {
+    warn.style.display = "none";
+  }
+}
+
+function renderStructured(data) {
+  const structured = document.getElementById("structuredView");
+  const raw = document.getElementById("rawFallback");
+  raw.style.display = "none";
+  structured.style.display = "flex";
+
+  let html = "";
+  html += `<div class="block block-title"><span class="tag">タイトル</span><div class="block-title-text">${escapeHtml(data.title)}</div></div>`;
+  html += `<div class="block"><span class="tag tag-meta">導入文</span><div class="body-text">${escapeHtml(data.intro)}</div></div>`;
+
+  if (Array.isArray(data.toc) && data.toc.length) {
+    html += `<div class="block"><span class="tag tag-meta">目次</span><ul class="toc-list">`;
+    data.toc.forEach(t => { html += `<li>${escapeHtml(t)}</li>`; });
+    html += `</ul></div>`;
+  }
+
+  (data.sections || []).forEach(sec => {
+    html += `<div class="block block-h2"><span class="tag tag-h2">H2見出し</span><div class="h2-text">${escapeHtml(sec.heading)}</div><div class="body-text">${escapeHtml(sec.body)}</div></div>`;
+    (sec.subsections || []).forEach(sub => {
+      html += `<div class="block block-h3"><span class="tag tag-h3">H3見出し</span><div class="h3-text">${escapeHtml(sub.heading)}</div><div class="body-text">${escapeHtml(sub.body)}</div></div>`;
+    });
+  });
+
+  html += `<div class="block"><span class="tag tag-meta">まとめ</span><div class="body-text">${escapeHtml(data.summary)}</div></div>`;
+
+  if (data.cta) {
+    html += `<div class="block block-cta"><span class="tag tag-meta">CTA</span><div class="h2-text">${escapeHtml(data.cta.heading || "")}</div><div class="body-text">${escapeHtml(data.cta.body || "")}</div></div>`;
+  }
+
+  structured.innerHTML = html;
+
+  const seoBlock = document.getElementById("seoMemoBlock");
+  if (data.seoMemo) {
+    const m = data.seoMemo;
+    document.getElementById("seoMemoBody").textContent =
+      "想定メインキーワード：" + (m.mainKeyword || "") + "\n" +
+      "関連キーワード：" + (m.relatedKeywords || "") + "\n" +
+      "メタディスクリプション案：" + (m.metaDescription || "") + "\n" +
+      "内部リンク候補：" + (m.internalLinks || "");
+    seoBlock.style.display = "block";
+  } else {
+    seoBlock.style.display = "none";
+  }
+}
+
+function renderRawFallback(text) {
+  document.getElementById("structuredView").style.display = "none";
+  document.getElementById("seoMemoBlock").style.display = "none";
+  const raw = document.getElementById("rawFallback");
+  raw.style.display = "block";
+  raw.textContent = text;
+}
+
+function buildPlainCopyText(data) {
+  const lines = [];
+  lines.push(data.title);
+  lines.push("");
+  lines.push(data.intro);
+  lines.push("");
+  if (Array.isArray(data.toc) && data.toc.length) {
+    lines.push("目次");
+    data.toc.forEach(t => lines.push("・" + t));
+    lines.push("");
+  }
+  (data.sections || []).forEach(sec => {
+    lines.push(sec.heading);
+    lines.push("");
+    lines.push(sec.body);
+    lines.push("");
+    (sec.subsections || []).forEach(sub => {
+      lines.push(sub.heading);
+      lines.push("");
+      lines.push(sub.body);
+      lines.push("");
+    });
+  });
+  lines.push("まとめ");
+  lines.push("");
+  lines.push(data.summary);
+  if (data.cta) {
+    lines.push("");
+    lines.push(data.cta.heading || "");
+    lines.push("");
+    lines.push(data.cta.body || "");
+  }
+  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+async function copyText(text, btn) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
+  const original = btn.textContent;
+  btn.textContent = "コピーしました";
+  btn.classList.add("copied");
+  setTimeout(() => { btn.textContent = original; btn.classList.remove("copied"); }, 1800);
+}
+
+async function handleGenerate() {
+  const themeInput = document.getElementById("themeInput");
+  const theme = themeInput.value.trim();
+  const errorBox = document.getElementById("errorBox");
+  errorBox.style.display = "none";
+  if (!theme) {
+    errorBox.textContent = "テーマ・キーワードを入力してください。";
+    errorBox.style.display = "block";
+    return;
+  }
+
+  const genBtn = document.getElementById("genBtn");
+  const loading = document.getElementById("loading");
+  genBtn.disabled = true;
+  loading.style.display = "flex";
+  document.getElementById("outputCard").style.display = "none";
+
+  try {
+    const historyTitles = loadHistory().map(h => h.title);
+    const resp = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ theme, historyTitles }),
+    });
+
+    const payload = await resp.json().catch(() => null);
+
+    if (!resp.ok) {
+      const msg = (payload && (payload.error || payload.detail)) || ("サーバーエラー（" + resp.status + "）");
+      throw new Error(msg);
+    }
+    if (!payload) throw new Error("応答を読み取れませんでした。");
+
+    lastRawText = payload.raw || "";
+    let title = theme;
+
+    if (payload.data) {
+      lastArticleData = payload.data;
+      title = payload.data.title || theme;
+      renderStructured(payload.data);
+    } else {
+      lastArticleData = null;
+      renderRawFallback(lastRawText || "記事の内容を取得できませんでした。");
+      const firstLine = (lastRawText || "").split("\n").map(l => l.trim()).find(l => l.length > 0);
+      if (firstLine) title = firstLine;
+    }
+
+    document.getElementById("outputCard").style.display = "block";
+    document.getElementById("copyBtn").classList.remove("copied");
+    document.getElementById("copyBtn").textContent = "記事をコピーする";
+
+    saveHistoryEntry(theme, title);
+    checkDuplicate();
+  } catch (e) {
+    errorBox.textContent = "記事の作成中にエラーが発生しました。もう一度お試しください。（" + (e && e.message ? e.message : e) + "）";
+    errorBox.style.display = "block";
+  } finally {
+    genBtn.disabled = false;
+    loading.style.display = "none";
+  }
+}
+
+document.getElementById("genBtn").addEventListener("click", handleGenerate);
+document.getElementById("regenBtn").addEventListener("click", handleGenerate);
+document.getElementById("themeInput").addEventListener("input", checkDuplicate);
+
+document.getElementById("copyBtn").addEventListener("click", (e) => {
+  const text = lastArticleData ? buildPlainCopyText(lastArticleData) : lastRawText;
+  copyText(text, e.currentTarget);
+});
+
+document.getElementById("copySeoBtn").addEventListener("click", (e) => {
+  const text = document.getElementById("seoMemoBody").textContent;
+  copyText(text, e.currentTarget);
+});
+
+renderChips();
+renderHistory();
+</script>
+</body>
+</html>
